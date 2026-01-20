@@ -1,0 +1,181 @@
+'use client'
+
+import React from "react"
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+
+  useEffect(() => {
+    // Initialize storage on mount
+    if (typeof window !== 'undefined') {
+      try {
+        // Demo users
+        const demoUsers = [
+          {
+            id: 'user-admin-1',
+            email: 'hr@company.com',
+            password: 'admin123',
+            role: 'admin',
+            name: 'Sarah Johnson',
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: 'user-emp-1',
+            email: 'user@company.com',
+            password: 'user123',
+            role: 'employee',
+            name: 'John Smith',
+            createdAt: new Date().toISOString(),
+          },
+        ]
+
+        if (!localStorage.getItem('qedge_users')) {
+          localStorage.setItem('qedge_users', JSON.stringify(demoUsers))
+        }
+
+        // Initialize other storage if needed
+        if (!localStorage.getItem('qedge_courses')) {
+          localStorage.setItem('qedge_courses', JSON.stringify([]))
+        }
+        if (!localStorage.getItem('qedge_meetings')) {
+          localStorage.setItem('qedge_meetings', JSON.stringify([]))
+        }
+        if (!localStorage.getItem('qedge_notifications')) {
+          localStorage.setItem('qedge_notifications', JSON.stringify([]))
+        }
+        if (!localStorage.getItem('qedge_emails')) {
+          localStorage.setItem('qedge_emails', JSON.stringify([]))
+        }
+      } catch (e) {
+        console.error('[v0] Error initializing storage:', e)
+      }
+    }
+  }, [])
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      const usersStr = localStorage.getItem('qedge_users')
+      const users = usersStr ? JSON.parse(usersStr) : []
+      const user = users.find((u: any) => u.email === email && u.password === password)
+
+      if (user) {
+        localStorage.setItem('qedge_current_user', JSON.stringify(user))
+        router.push(user.role === 'admin' ? '/admin/dashboard' : '/employee/dashboard')
+      } else {
+        setError('Invalid email or password. Try hr@company.com / admin123 or user@company.com / user123')
+      }
+    } catch (err) {
+      console.error('[v0] Login error:', err)
+      setError('An error occurred. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo/Branding */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-600 rounded-lg mb-4">
+            <span className="text-xl font-bold text-white">QE</span>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">QEdge</h1>
+          <p className="text-gray-600">HR Learning Management System</p>
+        </div>
+
+        {/* Login Card */}
+        <Card className="shadow-lg border-0">
+          <CardHeader className="space-y-1 pb-6">
+            <CardTitle className="text-2xl">Welcome Back</CardTitle>
+            <CardDescription>Sign in to your account to continue</CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              {/* Email Field */}
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium">
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  className="h-10"
+                />
+              </div>
+
+              {/* Password Field */}
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-medium">
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  className="h-10"
+                />
+              </div>
+
+              {/* Error Alert */}
+              {error && (
+                <Alert className="bg-red-50 border-red-200">
+                  <AlertDescription className="text-red-800 text-sm">{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {/* Demo Credentials Hint */}
+              <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-900 border border-blue-200">
+                <p className="font-semibold mb-2">Demo Credentials:</p>
+                <p className="mb-1">
+                  HR Admin: <span className="font-mono text-xs">hr@company.com / admin123</span>
+                </p>
+                <p>
+                  Employee: <span className="font-mono text-xs">user@company.com / user123</span>
+                </p>
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                disabled={loading || !email || !password}
+                className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+              >
+                {loading ? 'Signing in...' : 'Sign In'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Footer */}
+        <p className="text-center text-gray-500 text-sm mt-6">This is a demo environment. All data is stored locally.</p>
+      </div>
+    </div>
+  )
+}
