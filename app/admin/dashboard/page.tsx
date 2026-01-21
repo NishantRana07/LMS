@@ -10,16 +10,20 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, Users, BookOpen, Calendar, TrendingUp, Mail, Edit, X } from 'lucide-react'
-import { getCurrentUser, getMeetings, getCourses, getEmails, initializeStorage, createCourse } from '@/lib/storage'
+import { Plus, Users, BookOpen, Calendar, TrendingUp, Mail, Edit, X, Activity } from 'lucide-react'
+import { getCurrentUser, getMeetings, getCourses, getEmails, initializeStorage, createCourse, getAllUsers, getActivities } from '@/lib/storage'
+import type { User } from '@/lib/storage'
 import Link from 'next/link'
 
 interface DashboardStats {
-  totalUsers: number
+  totalEmployees: number
+  totalCandidates: number
   activeCourses: number
   upcomingMeetings: number
+  completionRate: number
   emailsSent: number
   openRate: number
+  recentActivities: number
 }
 
 interface Lesson {
@@ -28,18 +32,25 @@ interface Lesson {
   type: 'video' | 'document' | 'text'
   fileUrl?: string
   fileName?: string
+  order?: number
+  content?: string
+  completed?: boolean
 }
 
 export default function AdminDashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [stats, setStats] = useState<DashboardStats>({
-    totalUsers: 0,
+    totalEmployees: 0,
+    totalCandidates: 0,
     activeCourses: 0,
     upcomingMeetings: 0,
+    completionRate: 0,
     emailsSent: 0,
     openRate: 0,
+    recentActivities: 0,
   })
+  const [recentActivities, setRecentActivities] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [showCourseForm, setShowCourseForm] = useState(false)
@@ -70,7 +81,7 @@ export default function AdminDashboard() {
       initializeStorage()
       const currentUser = getCurrentUser()
       
-      if (!currentUser || currentUser.role !== 'admin') {
+      if (!currentUser || currentUser.role !== 'hr') {
         router.push('/login')
         return
       }
@@ -78,22 +89,37 @@ export default function AdminDashboard() {
       setUser(currentUser)
 
       try {
+        const users = getAllUsers()
+        const employees = users.filter((u) => u.role === 'employee')
+        const candidates = users.filter((u) => u.role === 'candidate')
         const courses = getCourses()
         const meetings = getMeetings()
         const emails = getEmails(currentUser.id)
+        const activities = getActivities()
         
         const now = new Date()
         const upcomingMeetings = meetings.filter((m) => new Date(m.scheduledAt) > now).length
         const openedEmails = emails.filter((e) => e.opened).length
         const openRate = emails.length > 0 ? (openedEmails / emails.length) * 100 : 0
+        const recentActivities = activities.slice(0, 5)
+        
+        // Calculate completion rate
+        const totalUsers = users.length
+        const completedUsers = users.filter((u) => (u.progress || 0) >= 100).length
+        const completionRate = totalUsers > 0 ? (completedUsers / totalUsers) * 100 : 0
 
         setStats({
-          totalUsers: 2,
+          totalEmployees: employees.length,
+          totalCandidates: candidates.length,
           activeCourses: courses.length,
           upcomingMeetings,
+          completionRate: Math.round(completionRate),
           emailsSent: emails.length,
           openRate: Math.round(openRate),
+          recentActivities: recentActivities.length,
         })
+        
+        setRecentActivities(recentActivities)
       } catch (e) {
         console.error('[v0] Error loading stats:', e)
       }
@@ -113,6 +139,7 @@ export default function AdminDashboard() {
         type: courseForm.newLesson.type,
         content: '',
         completed: false,
+        order: courseForm.lessons.length + 1,
       }
       setCourseForm({
         ...courseForm,
@@ -127,6 +154,30 @@ export default function AdminDashboard() {
       ...courseForm,
       lessons: courseForm.lessons.filter((l) => l.id !== id)
     })
+  }
+
+  const handleFileUpload = (lessonId: string, file: File) => {
+    // Create a fallback URL for the uploaded file
+    const fileUrl = URL.createObjectURL(file)
+    
+    // Update the lesson with file information
+    const updatedLessons = courseForm.lessons.map(lesson => 
+      lesson.id === lessonId 
+        ? { 
+            ...lesson, 
+            fileUrl, 
+            fileName: file.name,
+            fileSize: file.size
+          }
+        : lesson
+    )
+    
+    setCourseForm({
+      ...courseForm,
+      lessons: updatedLessons
+    })
+    
+    alert(`File "${file.name}" uploaded successfully!`)
   }
 
   const handleCreateCourse = async (e: React.FormEvent) => {
@@ -145,9 +196,10 @@ export default function AdminDashboard() {
         description: courseForm.description,
         lessons: courseForm.lessons.map((l) => ({
           ...l,
-          content: '',
+          content: l.content || '',
           courseId: `course-${Date.now()}`,
           completed: false,
+          order: l.order || 0,
         })),
         assignedTo: [],
         points: courseForm.points,
@@ -165,8 +217,8 @@ export default function AdminDashboard() {
       setShowCourseForm(false)
       
       // Refresh stats
-      const courses = getCourses()
-      setStats(prev => ({ ...prev, activeCourses: courses.length }))
+      const updatedCourses = getCourses()
+      setStats(prev => ({ ...prev, activeCourses: updatedCourses.length }))
       
       alert('Course created successfully!')
     } catch (error) {
@@ -292,19 +344,112 @@ export default function AdminDashboard() {
                         <Plus className="w-4 h-4" />
                         Add
                       </Button>
-                    </div>
 
-                    {courseForm.lessons.length > 0 && (
-                      <div className="space-y-2">
-                        {courseForm.lessons.map((lesson) => (
-                          <div
-                            key={lesson.id}
-                            className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
-                          >
-                            <div>
-                              <p className="font-medium text-foreground">{lesson.title}</p>
-                              <p className="text-xs text-muted-foreground capitalize mt-1">{lesson.type}</p>
-                            </div>
+                <div>
+                  <Label htmlFor="points" className="font-medium">
+                    Points for Completion
+                  </Label>
+                  <Input
+                    id="points"
+                    type="number"
+                    min="10"
+                    max="1000"
+                    value={courseForm.points}
+                    onChange={(e) => setCourseForm({ ...courseForm, points: parseInt(e.target.value) || 50 })}
+                    className="mt-2"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="description" className="font-medium">
+                  Description
+                </Label>
+                <textarea
+                  id="description"
+                  placeholder="Describe what employees will learn..."
+                  value={courseForm.description}
+                  onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })}
+                  className="mt-2 w-full px-3 py-2 border border-border rounded-lg text-sm"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label className="font-medium mb-3 block">Lessons</Label>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Lesson title"
+                      value={courseForm.newLesson.title}
+                      onChange={(e) => setCourseForm({ 
+                        ...courseForm, 
+                        newLesson: { ...courseForm.newLesson, title: e.target.value }
+                      })}
+                      className="flex-1"
+                    />
+                    <select
+                      value={courseForm.newLesson.type}
+                      onChange={(e) => setCourseForm({ 
+                        ...courseForm, 
+                        newLesson: { ...courseForm.newLesson, type: e.target.value as any }
+                      })}
+                      className="px-3 py-2 border border-border rounded-lg text-sm"
+                    >
+                      <option value="text">Text</option>
+                      <option value="video">Video</option>
+                      <option value="document">Document</option>
+                    </select>
+                    <Button
+                      type="button"
+                      onClick={handleAddLesson}
+                      className="gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add
+                    </Button>
+                  </div>
+
+                  {courseForm.lessons.length > 0 && (
+                    <div className="space-y-2">
+                      {courseForm.lessons.map((lesson) => (
+                        <div
+                          key={lesson.id}
+                          className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium text-foreground">{lesson.title}</p>
+                            <p className="text-xs text-muted-foreground capitalize mt-1">{lesson.type}</p>
+                            {lesson.fileName && (
+                              <p className="text-xs text-blue-600 mt-1">
+                                📎 {lesson.fileName}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            {lesson.type === 'document' || lesson.type === 'video' && (
+                              <input
+                                type="file"
+                                accept={lesson.type === 'video' ? 'video/*' : '.pdf,.doc,.docx,.txt'}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0]
+                                  if (file) {
+                                    handleFileUpload(lesson.id, file)
+                                  }
+                                }}
+                                className="hidden"
+                                id={`file-upload-${lesson.id}`}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => document.getElementById(`file-upload-${lesson.id}`)?.click()}
+                                className="gap-1"
+                              >
+                                📎 Upload
+                              </Button>
+                            )}
                             <Button
                               type="button"
                               variant="ghost"
@@ -314,13 +459,11 @@ export default function AdminDashboard() {
                               <X className="w-4 h-4" />
                             </Button>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-
-                <div className="flex gap-3 pt-4 border-t border-border">
                   <Button
                     type="submit"
                     disabled={submitting || !courseForm.title.trim()}
@@ -343,8 +486,18 @@ export default function AdminDashboard() {
             <Card className="p-6 bg-card border border-border">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Users</p>
-                  <p className="text-3xl font-bold text-foreground mt-2">{stats.totalUsers}</p>
+                  <p className="text-sm text-muted-foreground">Total Employees</p>
+                  <p className="text-3xl font-bold text-foreground mt-2">{stats.totalEmployees}</p>
+                </div>
+                <Users className="h-8 w-8 text-primary/50" />
+              </div>
+            </Card>
+
+            <Card className="p-6 bg-card border border-border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Candidates</p>
+                  <p className="text-3xl font-bold text-foreground mt-2">{stats.totalCandidates}</p>
                 </div>
                 <Users className="h-8 w-8 text-primary/50" />
               </div>
@@ -373,8 +526,8 @@ export default function AdminDashboard() {
             <Card className="p-6 bg-card border border-border">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Email Open Rate</p>
-                  <p className="text-3xl font-bold text-foreground mt-2">{stats.openRate}%</p>
+                  <p className="text-sm text-muted-foreground">Completion Rate</p>
+                  <p className="text-3xl font-bold text-foreground mt-2">{stats.completionRate}%</p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-primary/50" />
               </div>
@@ -389,28 +542,59 @@ export default function AdminDashboard() {
             <Card className="p-6 bg-card border border-border h-fit">
               <h2 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h2>
               <div className="space-y-3">
-                <Link href="/admin/courses" className="block">
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
-                    View All Courses
-                  </Button>
-                </Link>
+                <Button 
+                  onClick={() => setShowCourseForm(true)}
+                  className="w-full justify-start gap-2"
+                  variant="outline"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Course
+                </Button>
                 <Link href="/admin/users" className="block">
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
-                    Manage Users
+                  <Button variant="outline" className="w-full justify-start gap-2">
+                    <Users className="h-4 w-4" />
+                    Add User
                   </Button>
                 </Link>
-                <Link href="/admin/emails" className="block">
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
-                    Email Campaigns
+                <Link href="/admin/create-meeting" className="block">
+                  <Button variant="outline" className="w-full justify-start gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Schedule Meeting
                   </Button>
                 </Link>
-                <Link href="/admin/analytics" className="block">
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
-                    View Analytics
+                <Link href="/admin/emails/send" className="block">
+                  <Button variant="outline" className="w-full justify-start gap-2">
+                    <Mail className="h-4 w-4" />
+                    Send Announcement
                   </Button>
                 </Link>
               </div>
             </Card>
+
+            {/* Recent Activities */}
+            {recentActivities.length > 0 && (
+              <Card className="p-6 bg-card border border-border">
+                <h2 className="text-lg font-semibold text-foreground mb-4">Recent Activities</h2>
+                <div className="space-y-3">
+                  {recentActivities.map((activity, index) => (
+                    <div key={activity.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                      <div className="flex-shrink-0">
+                        {activity.type === 'course_completed' && <BookOpen className="h-4 w-4 text-green-600" />}
+                        {activity.type === 'badge_earned' && <TrendingUp className="h-4 w-4 text-yellow-600" />}
+                        {activity.type === 'user_joined' && <Users className="h-4 w-4 text-blue-600" />}
+                        {activity.type === 'meeting_attended' && <Calendar className="h-4 w-4 text-purple-600" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">{activity.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(activity.timestamp).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
           </div>
         </div>
       </main>

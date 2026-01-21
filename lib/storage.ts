@@ -4,10 +4,16 @@ export interface User {
   id: string
   email: string
   password: string
-  role: 'admin' | 'employee' | 'technical_team' | 'developer' | 'content_team'
+  role: 'hr' | 'employee' | 'candidate'
   name: string
   createdAt: string
+  joined?: string
   department?: string
+  isActive: boolean
+  progress?: number
+  attendance?: number
+  points?: number
+  badges?: string[]
 }
 
 export interface Course {
@@ -19,6 +25,10 @@ export interface Course {
   assignedTo: string[]
   lessons: Lesson[]
   points: number
+  category?: string
+  difficulty?: 'beginner' | 'intermediate' | 'advanced'
+  badge?: string
+  thumbnail?: string
 }
 
 export interface Lesson {
@@ -29,7 +39,11 @@ export interface Lesson {
   type: 'video' | 'document' | 'text'
   fileUrl?: string
   fileName?: string
+  fileSize?: number
+  duration?: number
   completed: boolean
+  points?: number
+  order: number
 }
 
 export interface Meeting {
@@ -103,14 +117,45 @@ export interface EmailLink {
   clickCount: number
 }
 
-export interface EmailTracking {
+export interface Message {
   id: string
-  emailId: string
-  trackingId: string
-  type: 'open' | 'click'
+  senderId: string
+  recipientType: 'all' | 'role' | 'individual'
+  recipients?: string[]
+  role?: User['role']
+  subject: string
+  content: string
+  type: 'announcement' | 'email' | 'meeting_invite' | 'system'
+  sentAt: string
+  status: 'draft' | 'sent' | 'failed'
+  readBy?: string[]
+  attachments?: MessageAttachment[]
+}
+
+export interface MessageAttachment {
+  id: string
+  name: string
+  url: string
+  size: number
+  type: string
+}
+
+export interface Badge {
+  id: string
+  name: string
+  description: string
+  icon: string
+  criteria: string
+  pointsRequired: number
+}
+
+export interface Activity {
+  id: string
+  userId: string
+  type: 'course_completed' | 'lesson_completed' | 'meeting_attended' | 'badge_earned' | 'user_joined'
+  description: string
   timestamp: string
-  userAgent?: string
-  ipAddress?: string
+  metadata?: any
 }
 
 // Initialize LocalStorage with demo data
@@ -118,49 +163,171 @@ export function initializeStorage() {
   // Demo users
   const demoUsers: User[] = [
     {
-      id: 'user-admin-1',
+      id: 'user-hr-1',
       email: 'hr@company.com',
       password: 'admin123',
-      role: 'admin',
-      name: 'Sarah Johnson',
+      role: 'hr',
+      name: 'HR Admin',
       createdAt: new Date().toISOString(),
-      department: 'HR'
+      joined: '2025-11-01',
+      department: 'Human Resources',
+      isActive: true,
+      progress: 100,
+      attendance: 95,
+      points: 500,
+      badges: ['hr_master', 'trainer']
+    },
+    // Candidates
+    {
+      id: 'user-candidate-1',
+      email: 'aarav@demo.com',
+      password: 'user123',
+      role: 'candidate',
+      name: 'Aarav Mehta',
+      createdAt: new Date().toISOString(),
+      joined: '2025-12-01',
+      department: 'Training',
+      isActive: true,
+      progress: 25,
+      attendance: 88,
+      points: 150,
+      badges: ['fast_learner']
     },
     {
-      id: 'user-emp-1',
-      email: 'user@company.com',
+      id: 'user-candidate-2',
+      email: 'riya@demo.com',
+      password: 'user123',
+      role: 'candidate',
+      name: 'Riya Sharma',
+      createdAt: new Date().toISOString(),
+      joined: '2025-12-02',
+      department: 'Training',
+      isActive: true,
+      progress: 40,
+      attendance: 92,
+      points: 200,
+      badges: ['dedicated']
+    },
+    {
+      id: 'user-candidate-3',
+      email: 'kabir@demo.com',
+      password: 'user123',
+      role: 'candidate',
+      name: 'Kabir Singh',
+      createdAt: new Date().toISOString(),
+      joined: '2025-12-03',
+      department: 'Training',
+      isActive: true,
+      progress: 60,
+      attendance: 85,
+      points: 300,
+      badges: ['team_player']
+    },
+    {
+      id: 'user-candidate-4',
+      email: 'ananya@demo.com',
+      password: 'user123',
+      role: 'candidate',
+      name: 'Ananya Verma',
+      createdAt: new Date().toISOString(),
+      joined: '2025-12-04',
+      department: 'Training',
+      isActive: true,
+      progress: 35,
+      attendance: 90,
+      points: 175,
+      badges: []
+    },
+    {
+      id: 'user-candidate-5',
+      email: 'rahul@demo.com',
+      password: 'user123',
+      role: 'candidate',
+      name: 'Rahul Gupta',
+      createdAt: new Date().toISOString(),
+      joined: '2025-12-05',
+      department: 'Training',
+      isActive: true,
+      progress: 80,
+      attendance: 94,
+      points: 400,
+      badges: ['top_performer']
+    },
+    // Employees
+    {
+      id: 'user-employee-1',
+      email: 'vikram@demo.com',
       password: 'user123',
       role: 'employee',
-      name: 'John Smith',
+      name: 'Vikram Yadav',
       createdAt: new Date().toISOString(),
-      department: 'Sales'
+      joined: '2025-11-20',
+      department: 'Engineering',
+      isActive: true,
+      progress: 75,
+      attendance: 96,
+      points: 450,
+      badges: ['mentor', 'expert']
     },
     {
-      id: 'user-tech-1',
-      email: 'tech@company.com',
-      password: 'tech123',
-      role: 'technical_team',
-      name: 'Mike Chen',
+      id: 'user-employee-2',
+      email: 'isha@demo.com',
+      password: 'user123',
+      role: 'employee',
+      name: 'Isha Malhotra',
       createdAt: new Date().toISOString(),
-      department: 'IT'
+      joined: '2025-11-22',
+      department: 'Marketing',
+      isActive: true,
+      progress: 85,
+      attendance: 98,
+      points: 475,
+      badges: ['leader']
     },
     {
-      id: 'user-dev-1',
-      email: 'dev@company.com',
-      password: 'dev123',
-      role: 'developer',
-      name: 'Alice Wilson',
+      id: 'user-employee-3',
+      email: 'rohit@demo.com',
+      password: 'user123',
+      role: 'employee',
+      name: 'Rohit Arora',
       createdAt: new Date().toISOString(),
-      department: 'Engineering'
+      joined: '2025-11-25',
+      department: 'Sales',
+      isActive: true,
+      progress: 90,
+      attendance: 92,
+      points: 490,
+      badges: ['sales_master']
     },
     {
-      id: 'user-content-1',
-      email: 'content@company.com',
-      password: 'content123',
-      role: 'content_team',
-      name: 'Bob Davis',
+      id: 'user-employee-4',
+      email: 'kritika@demo.com',
+      password: 'user123',
+      role: 'employee',
+      name: 'Kritika Bose',
       createdAt: new Date().toISOString(),
-      department: 'Marketing'
+      joined: '2025-11-28',
+      department: 'Operations',
+      isActive: true,
+      progress: 70,
+      attendance: 89,
+      points: 350,
+      badges: ['process_expert']
+    },
+    {
+      id: 'user-employee-5',
+      email: 'sahil@demo.com',
+      password: 'user123',
+      role: 'employee',
+      name: 'Sahil Khan',
+      createdAt: new Date().toISOString(),
+      joined: '2025-12-01',
+      department: 'Finance',
+      isActive: true,
+      progress: 65,
+      attendance: 91,
+      points: 325,
+      badges: ['analyst']
     }
   ]
 
@@ -186,6 +353,7 @@ export function initializeStorage() {
             content: 'Welcome content',
             type: 'text',
             completed: false,
+            order: 1,
           },
           {
             id: 'lesson-2',
@@ -195,6 +363,7 @@ export function initializeStorage() {
             type: 'document',
             fileName: 'company-policies.pdf',
             completed: false,
+            order: 2,
           },
           {
             id: 'lesson-3',
@@ -203,6 +372,7 @@ export function initializeStorage() {
             content: 'Team intro video',
             type: 'video',
             completed: false,
+            order: 3,
           },
         ],
         points: 100,
@@ -222,6 +392,7 @@ export function initializeStorage() {
             content: 'Leadership content',
             type: 'text',
             completed: false,
+            order: 1,
           },
           {
             id: 'lesson-5',
@@ -230,6 +401,7 @@ export function initializeStorage() {
             content: 'Communication content',
             type: 'video',
             completed: false,
+            order: 2,
           },
         ],
         points: 75,
@@ -250,6 +422,7 @@ export function initializeStorage() {
             type: 'document',
             fileName: 'safety-guide.pdf',
             completed: false,
+            order: 1,
           },
           {
             id: 'lesson-7',
@@ -258,6 +431,7 @@ export function initializeStorage() {
             content: 'Incident content',
             type: 'text',
             completed: false,
+            order: 2,
           },
         ],
         points: 50,
@@ -322,6 +496,117 @@ export function initializeStorage() {
   if (!localStorage.getItem('qedge_email_tracking')) {
     localStorage.setItem('qedge_email_tracking', JSON.stringify([]))
   }
+
+  // Initialize new entities
+  if (!localStorage.getItem('qedge_messages')) {
+    localStorage.setItem('qedge_messages', JSON.stringify([]))
+  }
+
+  if (!localStorage.getItem('qedge_badges')) {
+    const demoBadges: Badge[] = [
+      {
+        id: 'fast_learner',
+        name: 'Fast Learner',
+        description: 'Complete first course within 3 days',
+        icon: '🚀',
+        criteria: 'Complete course quickly',
+        pointsRequired: 50
+      },
+      {
+        id: 'dedicated',
+        name: 'Dedicated',
+        description: 'Maintain 90%+ attendance for 30 days',
+        icon: '💪',
+        criteria: 'High attendance',
+        pointsRequired: 100
+      },
+      {
+        id: 'team_player',
+        name: 'Team Player',
+        description: 'Complete 5 group activities',
+        icon: '🤝',
+        criteria: 'Team collaboration',
+        pointsRequired: 150
+      },
+      {
+        id: 'top_performer',
+        name: 'Top Performer',
+        description: 'Achieve 95%+ in all courses',
+        icon: '⭐',
+        criteria: 'Excellent performance',
+        pointsRequired: 300
+      },
+      {
+        id: 'mentor',
+        name: 'Mentor',
+        description: 'Help 10+ users complete courses',
+        icon: '👨‍🏫',
+        criteria: 'Mentorship',
+        pointsRequired: 200
+      },
+      {
+        id: 'expert',
+        name: 'Expert',
+        description: 'Complete all advanced courses',
+        icon: '🎓',
+        criteria: 'Advanced completion',
+        pointsRequired: 500
+      },
+      {
+        id: 'leader',
+        name: 'Leader',
+        description: 'Lead 3+ team projects',
+        icon: '👑',
+        criteria: 'Leadership',
+        pointsRequired: 400
+      },
+      {
+        id: 'sales_master',
+        name: 'Sales Master',
+        description: 'Exceed sales targets for 6 months',
+        icon: '💼',
+        criteria: 'Sales excellence',
+        pointsRequired: 350
+      },
+      {
+        id: 'process_expert',
+        name: 'Process Expert',
+        description: 'Optimize 5+ operational processes',
+        icon: '⚙️',
+        criteria: 'Process improvement',
+        pointsRequired: 250
+      },
+      {
+        id: 'analyst',
+        name: 'Analyst',
+        description: 'Complete all financial courses',
+        icon: '📊',
+        criteria: 'Financial expertise',
+        pointsRequired: 275
+      },
+      {
+        id: 'hr_master',
+        name: 'HR Master',
+        description: 'Manage all HR functions effectively',
+        icon: '👥',
+        criteria: 'HR excellence',
+        pointsRequired: 600
+      },
+      {
+        id: 'trainer',
+        name: 'Trainer',
+        description: 'Conduct 10+ training sessions',
+        icon: '📚',
+        criteria: 'Training excellence',
+        pointsRequired: 450
+      }
+    ]
+    localStorage.setItem('qedge_badges', JSON.stringify(demoBadges))
+  }
+
+  if (!localStorage.getItem('qedge_activities')) {
+    localStorage.setItem('qedge_activities', JSON.stringify([]))
+  }
 }
 
 // Auth functions
@@ -379,6 +664,37 @@ export function getUserEmailsByRoles(roles: User['role'][]): string[] {
 export function getAllUserEmails(): string[] {
   const users = getAllUsers()
   return users.map((u) => u.email)
+}
+
+export function createUser(user: Omit<User, 'id' | 'createdAt'>): User {
+  const users = getAllUsers()
+  const newUser: User = {
+    ...user,
+    id: `user-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    isActive: true,
+    progress: 0,
+    attendance: 0,
+    points: 0,
+    badges: [],
+  }
+  users.push(newUser)
+  localStorage.setItem('qedge_users', JSON.stringify(users))
+  return newUser
+}
+
+export function updateUser(id: string, updates: Partial<User>): User | null {
+  const users = getAllUsers()
+  const index = users.findIndex((u) => u.id === id)
+  if (index === -1) return null
+  
+  users[index] = { ...users[index], ...updates }
+  localStorage.setItem('qedge_users', JSON.stringify(users))
+  return users[index]
+}
+
+export function deactivateUser(id: string): boolean {
+  return updateUser(id, { isActive: false }) !== null
 }
 
 // Course functions
@@ -599,4 +915,76 @@ export function getEmailStats(userId: string) {
     totalClicks,
     clickRate: totalSent > 0 ? (totalClicks / totalSent) * 100 : 0,
   }
+}
+
+// Message functions
+export function getMessages(senderId?: string): Message[] {
+  const all = JSON.parse(localStorage.getItem('qedge_messages') || '[]') as Message[]
+  if (senderId) {
+    return all.filter((m) => m.senderId === senderId)
+  }
+  return all
+}
+
+export function createMessage(message: Omit<Message, 'id' | 'sentAt' | 'status'>): Message {
+  const all = getMessages()
+  const newMessage: Message = {
+    ...message,
+    id: `message-${Date.now()}`,
+    sentAt: new Date().toISOString(),
+    status: 'sent',
+    readBy: [],
+  }
+  all.push(newMessage)
+  localStorage.setItem('qedge_messages', JSON.stringify(all))
+  return newMessage
+}
+
+// Badge functions
+export function getBadges(): Badge[] {
+  return JSON.parse(localStorage.getItem('qedge_badges') || '[]') as Badge[]
+}
+
+export function awardBadge(userId: string, badgeId: string): boolean {
+  const users = getAllUsers()
+  const userIndex = users.findIndex((u) => u.id === userId)
+  if (userIndex === -1) return false
+  
+  const user = users[userIndex]
+  if (!user.badges) user.badges = []
+  if (!user.badges.includes(badgeId)) {
+    user.badges.push(badgeId)
+    localStorage.setItem('qedge_users', JSON.stringify(users))
+    
+    // Create activity
+    createActivity({
+      userId,
+      type: 'badge_earned',
+      description: `Earned badge: ${badgeId}`,
+      metadata: { badgeId }
+    })
+    return true
+  }
+  return false
+}
+
+// Activity functions
+export function getActivities(userId?: string): Activity[] {
+  const all = JSON.parse(localStorage.getItem('qedge_activities') || '[]') as Activity[]
+  if (userId) {
+    return all.filter((a) => a.userId === userId).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  }
+  return all.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+}
+
+export function createActivity(activity: Omit<Activity, 'id' | 'timestamp'>): Activity {
+  const all = getActivities()
+  const newActivity: Activity = {
+    ...activity,
+    id: `activity-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+  }
+  all.push(newActivity)
+  localStorage.setItem('qedge_activities', JSON.stringify(all))
+  return newActivity
 }
