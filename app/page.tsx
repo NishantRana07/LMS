@@ -12,7 +12,8 @@ export default function RootPage() {
       const userStr = localStorage.getItem('qedge_current_user')
       if (userStr) {
         const user = JSON.parse(userStr)
-        router.push(user.role === 'admin' ? '/admin/dashboard' : '/employee/dashboard')
+        // Redirect HR users to HR dashboard, others to unified dashboard
+        router.push(user.role === 'hr' ? '/hr/dashboard' : '/dashboard')
       } else {
         router.push('/login')
       }
@@ -28,7 +29,7 @@ export default function RootPage() {
           <span className="text-2xl font-bold text-primary-foreground">QE</span>
         </div>
         <h1 className="text-3xl font-bold text-foreground mb-2">QEdge</h1>
-        <p className="text-muted-foreground">HR Learning Management System</p>
+        <p className="text-muted-foreground">Unified HR Learning Platform</p>
         <p className="text-sm text-muted-foreground/60 mt-4">Initializing...</p>
       </div>
     </div>

@@ -21,13 +21,13 @@ export default function LoginPage() {
     // Initialize storage on mount
     if (typeof window !== 'undefined') {
       try {
-        // Demo users
+        // Demo users - only initialize if no users exist
         const demoUsers = [
           {
-            id: 'user-admin-1',
+            id: 'user-hr-1',
             email: 'hr@company.com',
             password: 'admin123',
-            role: 'admin',
+            role: 'hr',
             name: 'Sarah Johnson',
             createdAt: new Date().toISOString(),
           },
@@ -43,6 +43,23 @@ export default function LoginPage() {
 
         if (!localStorage.getItem('qedge_users')) {
           localStorage.setItem('qedge_users', JSON.stringify(demoUsers))
+        } else {
+          // Ensure HR user exists with correct role
+          const existingUsers = JSON.parse(localStorage.getItem('qedge_users') || '[]')
+          const hrUser = existingUsers.find((u: any) => u.email === 'hr@company.com')
+          if (!hrUser || hrUser.role !== 'hr') {
+            // Update or add HR user with correct role
+            const updatedUsers = existingUsers.filter((u: any) => u.email !== 'hr@company.com')
+            updatedUsers.push({
+              id: 'user-hr-1',
+              email: 'hr@company.com',
+              password: 'admin123',
+              role: 'hr',
+              name: 'Sarah Johnson',
+              createdAt: new Date().toISOString(),
+            })
+            localStorage.setItem('qedge_users', JSON.stringify(updatedUsers))
+          }
         }
 
         // Initialize other storage if needed
@@ -78,7 +95,8 @@ export default function LoginPage() {
 
       if (user) {
         localStorage.setItem('qedge_current_user', JSON.stringify(user))
-        router.push(user.role === 'admin' ? '/admin/dashboard' : '/employee/dashboard')
+        // Redirect HR users to HR dashboard, others to unified dashboard
+        router.push(user.role === 'hr' ? '/hr/dashboard' : '/dashboard')
       } else {
         setError('Invalid email or password. Try hr@company.com / admin123 or user@company.com / user123')
       }

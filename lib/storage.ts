@@ -158,6 +158,98 @@ export interface Activity {
   metadata?: any
 }
 
+// Additional HR interfaces
+export interface Announcement {
+  id: string
+  title: string
+  content: string
+  priority: 'low' | 'normal' | 'high' | 'urgent'
+  audience: 'all' | 'hr' | 'employee' | 'candidate'
+  senderId: string
+  createdAt: string
+}
+
+export interface LearningObject {
+  id: string
+  title: string
+  description: string
+  type: 'video' | 'document' | 'quiz' | 'interactive' | 'presentation'
+  content: string
+  category: string
+  difficulty: 'beginner' | 'intermediate' | 'advanced'
+  duration: number
+  tags: string[]
+  createdAt: string
+}
+
+export interface ClassroomSession {
+  id: string
+  title: string
+  instructor: string
+  location: string
+  scheduledAt: string
+  duration: number
+  maxParticipants: number
+  currentParticipants: string[]
+  materials: string[]
+  createdAt: string
+}
+
+export interface Batch {
+  id: string
+  name: string
+  description: string
+  courseIds: string[]
+  participantIds: string[]
+  instructorId: string
+  startDate: string
+  endDate: string
+  status: 'planned' | 'active' | 'completed' | 'cancelled'
+  createdAt: string
+}
+
+export interface Evaluation {
+  id: string
+  title: string
+  description: string
+  type: 'quiz' | 'assignment' | 'practical' | 'peer-review'
+  courseId: string
+  participantIds: string[]
+  dueDate: string
+  maxScore: number
+  passingScore: number
+  status: 'draft' | 'published' | 'closed'
+  createdAt: string
+}
+
+export interface Form {
+  id: string
+  title: string
+  description: string
+  type: 'survey' | 'feedback' | 'application' | 'assessment'
+  fields: FormField[]
+  responses: FormResponse[]
+  status: 'draft' | 'published' | 'closed'
+  createdAt: string
+}
+
+export interface FormField {
+  id: string
+  type: 'text' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'date' | 'file'
+  label: string
+  required: boolean
+  options?: string[]
+  validation?: string
+}
+
+export interface FormResponse {
+  id: string
+  formId: string
+  userId: string
+  answers: Record<string, any>
+  submittedAt: string
+}
+
 // Initialize LocalStorage with demo data
 export function initializeStorage() {
   // Demo users
@@ -607,6 +699,31 @@ export function initializeStorage() {
   if (!localStorage.getItem('qedge_activities')) {
     localStorage.setItem('qedge_activities', JSON.stringify([]))
   }
+
+  // Initialize new HR features demo data
+  if (!localStorage.getItem('qedge_announcements')) {
+    localStorage.setItem('qedge_announcements', JSON.stringify(demoAnnouncements))
+  }
+
+  if (!localStorage.getItem('qedge_learning_objects')) {
+    localStorage.setItem('qedge_learning_objects', JSON.stringify(demoLearningObjects))
+  }
+
+  if (!localStorage.getItem('qedge_classroom_sessions')) {
+    localStorage.setItem('qedge_classroom_sessions', JSON.stringify(demoClassroomSessions))
+  }
+
+  if (!localStorage.getItem('qedge_batches')) {
+    localStorage.setItem('qedge_batches', JSON.stringify(demoBatches))
+  }
+
+  if (!localStorage.getItem('qedge_evaluations')) {
+    localStorage.setItem('qedge_evaluations', JSON.stringify(demoEvaluations))
+  }
+
+  if (!localStorage.getItem('qedge_forms')) {
+    localStorage.setItem('qedge_forms', JSON.stringify(demoForms))
+  }
 }
 
 // Auth functions
@@ -918,26 +1035,299 @@ export function getEmailStats(userId: string) {
 }
 
 // Message functions
-export function getMessages(senderId?: string): Message[] {
-  const all = JSON.parse(localStorage.getItem('qedge_messages') || '[]') as Message[]
-  if (senderId) {
-    return all.filter((m) => m.senderId === senderId)
+export function createMessage(message: Omit<Message, 'id' | 'sentAt' | 'readBy'>): Message {
+  const messages = getMessages()
+  const newMessage: Message = {
+    id: `message-${Date.now()}`,
+    ...message,
+    sentAt: new Date().toISOString(),
+    readBy: []
   }
-  return all
+  messages.push(newMessage)
+  localStorage.setItem('qedge_messages', JSON.stringify(messages))
+  return newMessage
 }
 
-export function createMessage(message: Omit<Message, 'id' | 'sentAt' | 'status'>): Message {
-  const all = getMessages()
-  const newMessage: Message = {
-    ...message,
-    id: `message-${Date.now()}`,
-    sentAt: new Date().toISOString(),
-    status: 'sent',
-    readBy: [],
+export function getMessages(): Message[] {
+  if (typeof window === 'undefined') return []
+  return JSON.parse(localStorage.getItem('qedge_messages') || '[]')
+}
+
+// Additional HR functions
+export function createAnnouncement(announcement: Omit<Announcement, 'id' | 'createdAt' | 'senderId'>): Announcement {
+  const announcements = getAnnouncements()
+  const currentUser = getCurrentUser()
+  const newAnnouncement: Announcement = {
+    id: `announcement-${Date.now()}`,
+    ...announcement,
+    createdAt: new Date().toISOString(),
+    senderId: currentUser?.id || 'system'
   }
-  all.push(newMessage)
-  localStorage.setItem('qedge_messages', JSON.stringify(all))
-  return newMessage
+  announcements.push(newAnnouncement)
+  localStorage.setItem('qedge_announcements', JSON.stringify(announcements))
+  
+  // Create activity
+  createActivity({
+    title: `Announcement: ${announcement.title}`,
+    description: announcement.content.substring(0, 100),
+    userId: currentUser?.id || 'system'
+  })
+  
+  return newAnnouncement
+}
+
+export function getAnnouncements(): Announcement[] {
+  if (typeof window === 'undefined') return []
+  return JSON.parse(localStorage.getItem('qedge_announcements') || '[]')
+}
+
+export function getBatches(): Batch[] {
+  if (typeof window === 'undefined') return []
+  return JSON.parse(localStorage.getItem('qedge_batches') || '[]')
+}
+
+// Demo data for new features
+const demoAnnouncements: Announcement[] = [
+  {
+    id: 'announcement-1',
+    title: 'Welcome to QEdge Learning Platform',
+    content: 'We are excited to launch our new learning management system. Explore courses and start your learning journey!',
+    priority: 'high',
+    audience: 'all',
+    senderId: 'user-hr-1',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'announcement-2',
+    title: 'New Course: Advanced Leadership Skills',
+    content: 'A comprehensive course on leadership skills is now available for all employees.',
+    priority: 'normal',
+    audience: 'employee',
+    senderId: 'user-hr-1',
+    createdAt: new Date(Date.now() - 86400000).toISOString()
+  }
+]
+
+const demoLearningObjects: LearningObject[] = [
+  {
+    id: 'lo-1',
+    title: 'Introduction to Project Management',
+    description: 'Learn the fundamentals of project management',
+    type: 'video',
+    content: 'Video content for project management basics',
+    category: 'Management',
+    difficulty: 'beginner',
+    duration: 45,
+    tags: ['project-management', 'basics', 'management'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'lo-2',
+    title: 'Communication Skills Assessment',
+    description: 'Interactive quiz to test communication skills',
+    type: 'quiz',
+    content: 'Quiz content with multiple choice questions',
+    category: 'Soft Skills',
+    difficulty: 'intermediate',
+    duration: 30,
+    tags: ['communication', 'assessment', 'soft-skills'],
+    createdAt: new Date().toISOString()
+  }
+]
+
+const demoClassroomSessions: ClassroomSession[] = [
+  {
+    id: 'session-1',
+    title: 'Leadership Workshop',
+    instructor: 'John Smith',
+    location: 'Conference Room A',
+    scheduledAt: new Date(Date.now() + 86400000).toISOString(),
+    duration: 120,
+    maxParticipants: 20,
+    currentParticipants: ['user-employee-1', 'user-employee-2'],
+    materials: ['presentation.pdf', 'handout.docx'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'session-2',
+    title: 'Team Building Activities',
+    instructor: 'Sarah Johnson',
+    location: 'Training Room B',
+    scheduledAt: new Date(Date.now() + 172800000).toISOString(),
+    duration: 90,
+    maxParticipants: 15,
+    currentParticipants: ['user-employee-3'],
+    materials: ['activity-guide.pdf'],
+    createdAt: new Date().toISOString()
+  }
+]
+
+const demoBatches: Batch[] = [
+  {
+    id: 'batch-1',
+    name: 'Q1 2024 New Hires',
+    description: 'Onboarding batch for Q1 2024 new hires',
+    courseIds: ['course-1', 'course-2'],
+    participantIds: ['user-candidate-1', 'user-candidate-2'],
+    instructorId: 'user-hr-1',
+    startDate: '2024-01-15',
+    endDate: '2024-03-15',
+    status: 'active',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'batch-2',
+    name: 'Leadership Development Program',
+    description: 'Advanced leadership training for senior employees',
+    courseIds: ['course-3'],
+    participantIds: ['user-employee-1', 'user-employee-2', 'user-employee-3'],
+    instructorId: 'user-hr-1',
+    startDate: '2024-02-01',
+    endDate: '2024-04-01',
+    status: 'planned',
+    createdAt: new Date().toISOString()
+  }
+]
+
+const demoEvaluations: Evaluation[] = [
+  {
+    id: 'eval-1',
+    title: 'JavaScript Fundamentals Quiz',
+    description: 'Test your knowledge of JavaScript basics',
+    type: 'quiz',
+    courseId: 'course-1',
+    participantIds: ['user-candidate-1', 'user-candidate-2'],
+    dueDate: new Date(Date.now() + 604800000).toISOString(),
+    maxScore: 100,
+    passingScore: 70,
+    status: 'published',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'eval-2',
+    title: 'Project Management Assignment',
+    description: 'Create a project plan for a given scenario',
+    type: 'assignment',
+    courseId: 'course-2',
+    participantIds: ['user-employee-1'],
+    dueDate: new Date(Date.now() + 1209600000).toISOString(),
+    maxScore: 100,
+    passingScore: 60,
+    status: 'published',
+    createdAt: new Date().toISOString()
+  }
+]
+
+const demoForms: Form[] = [
+  {
+    id: 'form-1',
+    title: 'Course Feedback Survey',
+    description: 'Provide feedback on completed courses',
+    type: 'feedback',
+    fields: [
+      {
+        id: 'field-1',
+        type: 'select',
+        label: 'How would you rate this course?',
+        required: true,
+        options: ['Excellent', 'Good', 'Average', 'Poor']
+      },
+      {
+        id: 'field-2',
+        type: 'textarea',
+        label: 'Additional comments',
+        required: false
+      }
+    ],
+    responses: [],
+    status: 'published',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'form-2',
+    title: 'Training Needs Assessment',
+    description: 'Assess training requirements for the team',
+    type: 'assessment',
+    fields: [
+      {
+        id: 'field-1',
+        type: 'checkbox',
+        label: 'Areas needing improvement',
+        required: true,
+        options: ['Technical Skills', 'Soft Skills', 'Leadership', 'Communication']
+      },
+      {
+        id: 'field-2',
+        type: 'text',
+        label: 'Specific skills to develop',
+        required: true
+      }
+    ],
+    responses: [],
+    status: 'published',
+    createdAt: new Date().toISOString()
+  }
+]
+
+export function createBatch(batch: Omit<Batch, 'id' | 'createdAt'>): Batch {
+  const batches = getBatches()
+  const newBatch: Batch = {
+    id: `batch-${Date.now()}`,
+    ...batch,
+    createdAt: new Date().toISOString()
+  }
+  batches.push(newBatch)
+  localStorage.setItem('qedge_batches', JSON.stringify(batches))
+  return newBatch
+}
+
+export function getBatchById(id: string): Batch | null {
+  const batches = getBatches()
+  return batches.find((b) => b.id === id) || null
+}
+
+// Evaluations functions
+export function getEvaluations(): Evaluation[] {
+  return JSON.parse(localStorage.getItem('qedge_evaluations') || '[]')
+}
+
+export function createEvaluation(evaluation: Omit<Evaluation, 'id' | 'createdAt'>): Evaluation {
+  const evaluations = getEvaluations()
+  const newEvaluation: Evaluation = {
+    id: `evaluation-${Date.now()}`,
+    ...evaluation,
+    createdAt: new Date().toISOString()
+  }
+  evaluations.push(newEvaluation)
+  localStorage.setItem('qedge_evaluations', JSON.stringify(evaluations))
+  return newEvaluation
+}
+
+export function getEvaluationById(id: string): Evaluation | null {
+  const evaluations = getEvaluations()
+  return evaluations.find((e) => e.id === id) || null
+}
+
+// Forms functions
+export function getForms(): Form[] {
+  return JSON.parse(localStorage.getItem('qedge_forms') || '[]')
+}
+
+export function createForm(form: Omit<Form, 'id' | 'createdAt'>): Form {
+  const forms = getForms()
+  const newForm: Form = {
+    id: `form-${Date.now()}`,
+    ...form,
+    createdAt: new Date().toISOString()
+  }
+  forms.push(newForm)
+  localStorage.setItem('qedge_forms', JSON.stringify(forms))
+  return newForm
+}
+
+export function getFormById(id: string): Form | null {
+  const forms = getForms()
+  return forms.find((f) => f.id === id) || null
 }
 
 // Badge functions
