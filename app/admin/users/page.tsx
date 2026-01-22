@@ -576,12 +576,6 @@ export default function UsersManagement() {
     </div>
   )
 }
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="user@company.com"
-                      value={newUserEmail}
                       onChange={(e) => setNewUserEmail(e.target.value)}
                       className="mt-1"
                     />
