@@ -34,7 +34,20 @@ import {
   Megaphone,
   PieChart,
   ChevronRight,
-  Clipboard
+  Clipboard,
+  AlertCircle,
+  CheckCircle,
+  ArrowUp,
+  ArrowDown,
+  Eye,
+  Download,
+  Upload,
+  Zap,
+  Globe,
+  Shield,
+  Heart,
+  Trophy,
+  Target as TargetIcon
 } from 'lucide-react'
 import { 
   getCurrentUser, 
@@ -60,6 +73,8 @@ export default function HRDashboard() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [showQuickActions, setShowQuickActions] = useState(false)
+  const [selectedTimeRange, setSelectedTimeRange] = useState('30d')
+  const [showNotifications, setShowNotifications] = useState(false)
 
   // Quick action forms
   const [meetingForm, setMeetingForm] = useState({
@@ -102,16 +117,29 @@ export default function HRDashboard() {
     const employeeUsers = users.filter(u => u.role === 'employee').length
     const candidateUsers = users.filter(u => u.role === 'candidate').length
     const activeUsers = users.filter(u => u.isActive).length
+    const newUsersThisMonth = users.filter(u => {
+      const userDate = new Date(u.createdAt)
+      const thisMonth = new Date()
+      return userDate.getMonth() === thisMonth.getMonth() && 
+             userDate.getFullYear() === thisMonth.getFullYear()
+    }).length
     
     const totalCourses = courses.length
+    const activeCourses = courses.filter(c => c.status === 'active').length
     const assignedCourses = courses.reduce((sum, course) => sum + course.assignedTo.length, 0)
     const completedCourses = users.filter(u => (u.progress || 0) >= 100).length
     const totalPoints = courses.reduce((sum, course) => sum + course.points, 0)
+    const avgProgress = users.reduce((sum, u) => sum + (u.progress || 0), 0) / users.length
     
     const totalMessages = messages.length
     const unreadMessages = messages.filter(m => 
       m.senderId !== currentUser?.id && !m.readBy?.includes(currentUser!.id)
     ).length
+    const messagesToday = messages.filter(m => {
+      const msgDate = new Date(m.createdAt)
+      const today = new Date()
+      return msgDate.toDateString() === today.toDateString()
+    }).length
     
     const recentActivities = activities.slice(0, 5)
 
@@ -123,14 +151,44 @@ export default function HRDashboard() {
     const pendingEvaluations = users.filter(u => 
       u.role === 'candidate' && (u.progress || 0) < 50
     ).length
+    
+    const topPerformers = users
+      .filter(u => u.points && u.points > 0)
+      .sort((a, b) => (b.points || 0) - (a.points || 0))
+      .slice(0, 5)
+    
+    const recentCompletions = activities.filter(a => 
+      a.type === 'course_completed' && 
+      new Date(a.timestamp) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    ).length
 
     return {
-      users: { total: totalUsers, hr: hrUsers, employee: employeeUsers, candidate: candidateUsers, active: activeUsers },
-      courses: { total: totalCourses, assigned: assignedCourses, completed: completedCourses, points: totalPoints },
-      messages: { total: totalMessages, unread: unreadMessages },
+      users: { 
+        total: totalUsers, 
+        hr: hrUsers, 
+        employee: employeeUsers, 
+        candidate: candidateUsers, 
+        active: activeUsers,
+        newThisMonth: newUsersThisMonth
+      },
+      courses: { 
+        total: totalCourses, 
+        active: activeCourses,
+        assigned: assignedCourses, 
+        completed: completedCourses, 
+        points: totalPoints,
+        avgProgress: Math.round(avgProgress)
+      },
+      messages: { 
+        total: totalMessages, 
+        unread: unreadMessages,
+        today: messagesToday
+      },
       activities: recentActivities,
       meetings: { upcoming: upcomingMeetings },
-      evaluations: { pending: pendingEvaluations }
+      evaluations: { pending: pendingEvaluations },
+      topPerformers,
+      recentCompletions
     }
   }
 
@@ -214,16 +272,37 @@ export default function HRDashboard() {
       
       <main className="flex-1 ml-64 overflow-auto">
         <div className="p-8">
-          {/* Header */}
+          {/* Enhanced Header */}
           <div className="flex justify-between items-center mb-8">
             <div>
               <h1 className="text-3xl font-bold text-foreground">HR Dashboard</h1>
               <p className="text-muted-foreground mt-2">
                 Manage your entire learning ecosystem
               </p>
+              <div className="flex items-center gap-4 mt-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Globe className="h-4 w-4" />
+                  <span>System Status: </span>
+                  <span className="text-green-600 font-medium">All Systems Operational</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span>Last updated: {new Date().toLocaleTimeString()}</span>
+                </div>
+              </div>
             </div>
             
             <div className="flex gap-2">
+              <select
+                value={selectedTimeRange}
+                onChange={(e) => setSelectedTimeRange(e.target.value)}
+                className="px-3 py-2 border border-border rounded-md bg-background text-sm"
+              >
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+                <option value="1y">Last year</option>
+              </select>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -233,18 +312,51 @@ export default function HRDashboard() {
                   className="pl-10 w-64"
                 />
               </div>
+              <div className="relative">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-2"
+                  onClick={() => setShowNotifications(!showNotifications)}
+                >
+                  <Bell className="h-4 w-4" />
+                  {stats.messages.unread > 0 && (
+                    <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                  )}
+                </Button>
+                
+                {/* Notifications Dropdown */}
+                {showNotifications && (
+                  <div className="absolute right-0 top-12 w-80 bg-card border border-border rounded-lg shadow-lg z-50">
+                    <div className="p-4 border-b border-border">
+                      <h3 className="font-medium text-foreground">Notifications</h3>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {stats.messages.unread > 0 ? (
+                        <div className="p-4">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span className="text-sm text-foreground">{stats.messages.unread} unread messages</span>
+                          </div>
+                          <Button variant="outline" size="sm" className="w-full">
+                            View All Messages
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="p-4 text-center text-muted-foreground">
+                          No new notifications
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               <Button 
                 onClick={() => setShowQuickActions(!showQuickActions)}
                 className="gap-2"
               >
                 <Plus className="h-4 w-4" />
                 Quick Actions
-              </Button>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Bell className="h-4 w-4" />
-                {stats.messages.unread > 0 && (
-                  <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                )}
               </Button>
             </div>
           </div>
@@ -337,14 +449,20 @@ export default function HRDashboard() {
             </Card>
           )}
 
-          {/* Stats Cards */}
+          {/* Enhanced Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card className="p-6 bg-card border border-border">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Users</p>
                   <p className="text-2xl font-bold text-foreground mt-1">{stats.users.total}</p>
-                  <p className="text-xs text-green-600 mt-1">+{stats.users.active} active</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <ArrowUp className="h-3 w-3 text-green-600" />
+                    <span className="text-xs text-green-600">+{stats.users.newThisMonth} this month</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-muted-foreground">{stats.users.active} active</span>
+                  </div>
                 </div>
                 <Users className="h-8 w-8 text-blue-500" />
               </div>
@@ -353,9 +471,14 @@ export default function HRDashboard() {
             <Card className="p-6 bg-card border border-border">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Courses</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">{stats.courses.total}</p>
-                  <p className="text-xs text-green-600 mt-1">{stats.courses.assigned} enrolled</p>
+                  <p className="text-sm text-muted-foreground">Active Courses</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">{stats.courses.active}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-green-600">{stats.courses.assigned} enrolled</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-muted-foreground">{stats.courses.avgProgress}% avg progress</span>
+                  </div>
                 </div>
                 <BookOpen className="h-8 w-8 text-green-500" />
               </div>
@@ -364,28 +487,42 @@ export default function HRDashboard() {
             <Card className="p-6 bg-card border border-border">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Meetings</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">{stats.meetings.upcoming}</p>
-                  <p className="text-xs text-orange-600 mt-1">upcoming</p>
+                  <p className="text-sm text-muted-foreground">Engagement Rate</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">
+                    {stats.users.total > 0 ? Math.round((stats.courses.completed / stats.users.total) * 100) : 0}%
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Trophy className="h-3 w-3 text-orange-600" />
+                    <span className="text-xs text-orange-600">{stats.recentCompletions} completions this week</span>
+                  </div>
                 </div>
-                <Calendar className="h-8 w-8 text-orange-500" />
+                <TrendingUp className="h-8 w-8 text-orange-500" />
               </div>
             </Card>
 
             <Card className="p-6 bg-card border border-border">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Evaluations</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">{stats.evaluations.pending}</p>
-                  <p className="text-xs text-purple-600 mt-1">pending</p>
+                  <p className="text-sm text-muted-foreground">Pending Tasks</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">
+                    {stats.meetings.upcoming + stats.evaluations.pending}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Calendar className="h-3 w-3 text-purple-600" />
+                    <span className="text-xs text-purple-600">{stats.meetings.upcoming} meetings</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Clipboard className="h-3 w-3 text-purple-600" />
+                    <span className="text-xs text-purple-600">{stats.evaluations.pending} evaluations</span>
+                  </div>
                 </div>
-                <Clipboard className="h-8 w-8 text-purple-500" />
+                <TargetIcon className="h-8 w-8 text-purple-500" />
               </div>
             </Card>
           </div>
 
-          {/* Quick Access Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Enhanced Quick Access Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card className="bg-card border border-border hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/hr/courses')}>
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -394,7 +531,10 @@ export default function HRDashboard() {
                 </div>
                 <h3 className="text-lg font-semibold text-foreground">Courses</h3>
                 <p className="text-sm text-muted-foreground mt-1">Manage training programs</p>
-                <div className="mt-4 text-sm text-blue-600">{stats.courses.total} active courses</div>
+                <div className="mt-4 space-y-1">
+                  <div className="text-sm text-blue-600">{stats.courses.total} total courses</div>
+                  <div className="text-xs text-muted-foreground">{stats.courses.active} active</div>
+                </div>
               </div>
             </Card>
 
@@ -406,28 +546,54 @@ export default function HRDashboard() {
                 </div>
                 <h3 className="text-lg font-semibold text-foreground">Users</h3>
                 <p className="text-sm text-muted-foreground mt-1">Manage learners and staff</p>
-                <div className="mt-4 text-sm text-green-600">{stats.users.total} total users</div>
+                <div className="mt-4 space-y-1">
+                  <div className="text-sm text-green-600">{stats.users.total} total users</div>
+                  <div className="text-xs text-muted-foreground">{stats.users.active} active</div>
+                </div>
               </div>
             </Card>
 
-            <Card className="bg-card border border-border hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/hr/reports')}>
+            <Card className="bg-card border border-border hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/hr/analytics')}>
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <PieChart className="h-8 w-8 text-purple-500" />
+                  <BarChart3 className="h-8 w-8 text-purple-500" />
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-semibold text-foreground">Reports</h3>
-                <p className="text-sm text-muted-foreground mt-1">Analytics and insights</p>
-                <div className="mt-4 text-sm text-purple-600">View detailed reports</div>
+                <h3 className="text-lg font-semibold text-foreground">Analytics</h3>
+                <p className="text-sm text-muted-foreground mt-1">Deep insights & metrics</p>
+                <div className="mt-4 space-y-1">
+                  <div className="text-sm text-purple-600">Advanced reporting</div>
+                  <div className="text-xs text-muted-foreground">Real-time data</div>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="bg-card border border-border hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/hr/support')}>
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <MessageSquare className="h-8 w-8 text-orange-500" />
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">Support</h3>
+                <p className="text-sm text-muted-foreground mt-1">Help & assistance</p>
+                <div className="mt-4 space-y-1">
+                  <div className="text-sm text-orange-600">{stats.messages.unread} unread</div>
+                  <div className="text-xs text-muted-foreground">Ticket management</div>
+                </div>
               </div>
             </Card>
           </div>
 
-          {/* Recent Activity & Upcoming Events */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Enhanced Recent Activity & Top Performers */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="bg-card border border-border">
               <div className="p-6">
-                <h3 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
+                  <Button variant="outline" size="sm">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </div>
                 <div className="space-y-3">
                   {stats.activities.length > 0 ? (
                     stats.activities.map((activity) => (
@@ -453,15 +619,65 @@ export default function HRDashboard() {
 
             <Card className="bg-card border border-border">
               <div className="p-6">
-                <h3 className="text-lg font-semibold text-foreground mb-4">System Overview</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-foreground">Top Performers</h3>
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                </div>
+                <div className="space-y-3">
+                  {stats.topPerformers.length > 0 ? (
+                    stats.topPerformers.map((user, index) => (
+                      <div key={user.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                        <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center text-sm font-bold text-yellow-800">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-foreground">{user.name}</p>
+                          <p className="text-xs text-muted-foreground">{user.role}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-foreground">{user.points} pts</p>
+                          <p className="text-xs text-muted-foreground">{user.progress}%</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">No performers data</p>
+                  )}
+                </div>
+              </div>
+            </Card>
+
+            <Card className="bg-card border border-border">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-foreground">System Overview</h3>
+                  <Settings className="h-5 w-5 text-gray-500" />
+                </div>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Active Courses</span>
-                    <span className="text-sm font-medium">{stats.courses.total}</span>
+                    <span className="text-sm text-muted-foreground">System Health</span>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-600">Healthy</span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Total Enrollments</span>
-                    <span className="text-sm font-medium">{stats.courses.assigned}</span>
+                    <span className="text-sm text-muted-foreground">Storage Used</span>
+                    <span className="text-sm font-medium">2.4 GB / 10 GB</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">API Status</span>
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-600">Active</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Security</span>
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-600">Secured</span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Completion Rate</span>
@@ -470,12 +686,8 @@ export default function HRDashboard() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Pending Evaluations</span>
-                    <span className="text-sm font-medium text-orange-600">{stats.evaluations.pending}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Unread Messages</span>
-                    <span className="text-sm font-medium text-blue-600">{stats.messages.unread}</span>
+                    <span className="text-sm text-muted-foreground">Avg. Response Time</span>
+                    <span className="text-sm font-medium">124ms</span>
                   </div>
                 </div>
               </div>
