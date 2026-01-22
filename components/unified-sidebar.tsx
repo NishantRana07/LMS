@@ -230,7 +230,7 @@ export function UnifiedSidebar({ userRole, userName }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-6">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-6 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30">
         <div className="space-y-2">
           {navItems.map((item) => {
             if (item.items) {
@@ -282,10 +282,10 @@ export function UnifiedSidebar({ userRole, userName }: SidebarProps) {
               )
             } else {
               const Icon = item.icon
-              const active = isActive(item.href)
+              const active = isActive(item.href || '')
               
               return (
-                <Link key={item.href} href={item.href}>
+                <Link key={item.href} href={item.href || '#'}>
                   <Button
                     variant="ghost"
                     className={`w-full justify-start gap-3 ${
