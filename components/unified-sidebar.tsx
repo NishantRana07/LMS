@@ -230,7 +230,7 @@ export function UnifiedSidebar({ userRole, userName }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-6 scrollbar-thin">
+      <nav className="flex-1 overflow-y-auto px-3 py-6" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         <div className="space-y-2">
           {navItems.map((item) => {
             if (item.items) {
