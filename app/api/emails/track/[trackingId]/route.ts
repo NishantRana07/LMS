@@ -7,9 +7,9 @@ const PIXEL = Buffer.from([
   0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x01, 0x44, 0x00, 0x3b,
 ])
 
-export async function GET(request: NextRequest, { params }: { params: { trackingId: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ trackingId: string }> }) {
   try {
-    const { trackingId } = params
+    const { trackingId } = await params
     const userAgent = request.headers.get('user-agent') || ''
 
     console.log(`[Email Tracking] Open detected for tracking ID: ${trackingId}`)
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest, { params }: { params: { tracking
     // The actual recording happens in the client component
 
     // Return the 1x1 transparent GIF pixel
-    return new NextResponse(PIXEL, {
+    return new NextResponse(PIXEL as any, {
       status: 200,
       headers: {
         'Content-Type': 'image/gif',
@@ -32,6 +32,6 @@ export async function GET(request: NextRequest, { params }: { params: { tracking
     })
   } catch (error) {
     console.error('Email tracking error:', error)
-    return new NextResponse(PIXEL, { status: 200 })
+    return new NextResponse(PIXEL as any, { status: 200 })
   }
 }

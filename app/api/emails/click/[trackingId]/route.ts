@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest, { params }: { params: { trackingId: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ trackingId: string }> }) {
   try {
-    const { trackingId } = params
+    const { trackingId } = await params
     const searchParams = request.nextUrl.searchParams
     const originalUrl = searchParams.get('url')
     const linkId = searchParams.get('linkId')

@@ -1068,8 +1068,8 @@ export function createAnnouncement(announcement: Omit<Announcement, 'id' | 'crea
   
   // Create activity
   createActivity({
-    title: `Announcement: ${announcement.title}`,
-    description: announcement.content.substring(0, 100),
+    type: 'user_joined',
+    description: `Announcement: ${announcement.title} - ${announcement.content.substring(0, 100)}`,
     userId: currentUser?.id || 'system'
   })
   

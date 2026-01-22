@@ -14,7 +14,7 @@ import {
   Mail, 
   TrendingUp,
   Award,
-  Activity,
+  Activity as ActivityIcon,
   Clock,
   Target,
   Star,
@@ -213,10 +213,10 @@ export default function UnifiedDashboard() {
                   stats.activities.map((activity) => (
                     <div key={activity.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
                       <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Activity className="h-4 w-4 text-blue-600" />
+                        <ActivityIcon className="h-4 w-4 text-blue-600" />
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-foreground">{activity.title}</p>
+                        <p className="text-sm font-medium text-foreground">{activity.type.replace('_', ' ')}</p>
                         <p className="text-xs text-muted-foreground">{activity.description}</p>
                       </div>
                       <span className="text-xs text-muted-foreground">
