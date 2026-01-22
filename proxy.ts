@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
 
   // Check if user is authenticated via cookie (set during login)
@@ -20,7 +20,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // For protected pages, we can't check auth in middleware with LocalStorage
+  // For protected pages, we can't check auth in proxy with LocalStorage
   // So we redirect logic will happen in components instead
   return NextResponse.next()
 }
