@@ -29,6 +29,8 @@ export interface Course {
   difficulty?: 'beginner' | 'intermediate' | 'advanced'
   badge?: string
   thumbnail?: string
+  status?: 'active' | 'draft' | 'archived'
+  duration?: number
 }
 
 export interface Lesson {
@@ -468,6 +470,10 @@ export function initializeStorage() {
           },
         ],
         points: 100,
+        category: 'Onboarding',
+        difficulty: 'beginner',
+        status: 'active',
+        duration: 8,
       },
       {
         id: 'course-demo-2',
@@ -497,6 +503,10 @@ export function initializeStorage() {
           },
         ],
         points: 75,
+        category: 'Professional Skills',
+        difficulty: 'intermediate',
+        status: 'active',
+        duration: 6,
       },
       {
         id: 'course-demo-3',
@@ -527,6 +537,10 @@ export function initializeStorage() {
           },
         ],
         points: 50,
+        category: 'Compliance',
+        difficulty: 'beginner',
+        status: 'active',
+        duration: 4,
       },
     ]
     localStorage.setItem('qedge_courses', JSON.stringify(demoCourses))
@@ -814,6 +828,16 @@ export function deactivateUser(id: string): boolean {
   return updateUser(id, { isActive: false }) !== null
 }
 
+export function deleteUser(id: string): boolean {
+  const users = getAllUsers()
+  const index = users.findIndex((u) => u.id === id)
+  if (index === -1) return false
+  
+  users.splice(index, 1)
+  localStorage.setItem('qedge_users', JSON.stringify(users))
+  return true
+}
+
 // Course functions
 export function getCourses(): Course[] {
   return JSON.parse(localStorage.getItem('qedge_courses') || '[]')
@@ -844,6 +868,16 @@ export function updateCourse(id: string, updates: Partial<Course>): Course | nul
   courses[index] = { ...courses[index], ...updates }
   localStorage.setItem('qedge_courses', JSON.stringify(courses))
   return courses[index]
+}
+
+export function deleteCourse(id: string): boolean {
+  const courses = getCourses()
+  const index = courses.findIndex((c) => c.id === id)
+  if (index === -1) return false
+  
+  courses.splice(index, 1)
+  localStorage.setItem('qedge_courses', JSON.stringify(courses))
+  return true
 }
 
 // Meeting functions
