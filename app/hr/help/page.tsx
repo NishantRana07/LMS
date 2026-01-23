@@ -18,7 +18,7 @@ import {
   HelpCircle,
   Download,
   Clock,
-  User,
+  User as UserIcon,
   Settings,
   Shield,
   Database
@@ -233,7 +233,7 @@ export default function HRHelp() {
   const getCategoryIcon = (category: string) => {
     switch(category) {
       case 'getting-started': return <HelpCircle className="h-5 w-5" />
-      case 'user-management': return <User className="h-5 w-5" />
+      case 'user-management': return <UserIcon className="h-5 w-5" />
       case 'courses': return <BookOpen className="h-5 w-5" />
       case 'reports': return <Database className="h-5 w-5" />
       case 'settings': return <Settings className="h-5 w-5" />
@@ -407,7 +407,7 @@ export default function HRHelp() {
                             <span>{article.readTime} min read</span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <User className="h-4 w-4" />
+                            <UserIcon className="h-4 w-4" />
                             <span>{article.views} views</span>
                           </div>
                           <div className="flex items-center gap-1">

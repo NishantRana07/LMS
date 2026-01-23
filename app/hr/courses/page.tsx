@@ -172,7 +172,7 @@ export default function HRCourses() {
                 <div>
                   <p className="text-sm text-muted-foreground">Avg. Duration</p>
                   <p className="text-2xl font-bold text-foreground mt-1">
-                    {courses.length > 0 ? Math.round(courses.reduce((sum, course) => sum + course.duration, 0) / courses.length) : 0}h
+                    {courses.length > 0 ? Math.round(courses.reduce((sum, course) => sum + (course.duration || 0), 0) / courses.length) : 0}h
                   </p>
                 </div>
                 <Clock className="h-8 w-8 text-orange-500" />
@@ -214,11 +214,11 @@ export default function HRCourses() {
                         <BookOpen className="h-6 w-6 text-blue-600" />
                       </div>
                       <div className="flex gap-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(course.status)}`}>
-                          {course.status}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(course.status || 'draft')}`}>
+                          {course.status || 'draft'}
                         </span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(course.difficulty)}`}>
-                          {course.difficulty}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(course.difficulty || 'beginner')}`}>
+                          {course.difficulty || 'beginner'}
                         </span>
                       </div>
                     </div>
@@ -229,7 +229,7 @@ export default function HRCourses() {
                     <div className="space-y-2 mb-4">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Duration</span>
-                        <span className="font-medium">{course.duration}h</span>
+                        <span className="font-medium">{course.duration || 0}h</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Points</span>

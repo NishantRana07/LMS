@@ -136,7 +136,7 @@ export default function HRDashboard() {
       m.senderId !== currentUser?.id && !m.readBy?.includes(currentUser!.id)
     ).length
     const messagesToday = messages.filter(m => {
-      const msgDate = new Date(m.createdAt)
+      const msgDate = new Date(m.sentAt)
       const today = new Date()
       return msgDate.toDateString() === today.toDateString()
     }).length
@@ -636,7 +636,7 @@ export default function HRDashboard() {
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-medium text-foreground">{user.points} pts</p>
-                          <p className="text-xs text-muted-foreground">{user.progress}%</p>
+                          <p className="text-xs text-muted-foreground">{user.progress || 0}%</p>
                         </div>
                       </div>
                     ))

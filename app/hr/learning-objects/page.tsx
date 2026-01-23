@@ -313,7 +313,7 @@ export default function HRLearningObjects() {
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Duration</span>
-                        <span className="font-medium">{obj.duration} min</span>
+                        <span className="font-medium">{obj.duration || 0} min</span>
                       </div>
                     </div>
                     

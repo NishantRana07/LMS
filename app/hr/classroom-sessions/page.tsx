@@ -291,7 +291,7 @@ export default function HRClassroomSessions() {
                             <div className="flex items-center gap-2 text-sm">
                               <Clock className="h-4 w-4 text-muted-foreground" />
                               <span className="text-muted-foreground">Duration:</span>
-                              <span className="font-medium">{session.duration} min</span>
+                              <span className="font-medium">{session.duration || 0} min</span>
                             </div>
                           </div>
                           

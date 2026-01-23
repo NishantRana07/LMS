@@ -14,7 +14,7 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  User,
+  User as UserIcon,
   Calendar,
   Send,
   Reply,
@@ -427,7 +427,7 @@ export default function HRSupport() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
-                              <User className="h-4 w-4" />
+                              <UserIcon className="h-4 w-4" />
                               <span>{ticket.userName}</span>
                             </div>
                             <div className="flex items-center gap-2">

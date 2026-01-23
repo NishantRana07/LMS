@@ -326,11 +326,11 @@ export default function HRWebinars() {
                           {getPlatformIcon(webinar.platform)}
                         </div>
                         <div className="flex gap-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(webinar.status)}`}>
-                            {webinar.status}
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(webinar.status || 'scheduled')}`}>
+                            {webinar.status || 'scheduled'}
                           </span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPlatformColor(webinar.platform)}`}>
-                            {webinar.platform}
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPlatformColor(webinar.platform || 'zoom')}`}>
+                            {webinar.platform || 'zoom'}
                           </span>
                         </div>
                       </div>
@@ -345,7 +345,7 @@ export default function HRWebinars() {
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Duration</span>
-                          <span className="font-medium">{webinar.duration} min</span>
+                          <span className="font-medium">{webinar.duration || 0} min</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Participants</span>
